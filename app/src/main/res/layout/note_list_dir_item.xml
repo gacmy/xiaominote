@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+
+                android:paddingLeft="@dimen/paddingsize"
+                android:paddingBottom="@dimen/paddingsize"
+                android:paddingTop="@dimen/paddingsize"
+                android:paddingRight="0dp"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content">
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:id="@+id/tv_dirname"
+        android:text="this is a note"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="5dp"
+        android:textStyle="bold"
+        android:textSize="@dimen/textsize"
+        />
+    <View
+        android:id="@+id/line1"
+        android:layout_toRightOf="@+id/tv_dirname"
+        android:layout_width="1dp"
+        android:layout_height="10dp"
+        android:layout_centerVertical="true"
+        android:background="@color/fbutton_color_belize_hole"
+        />
+    <TextView
+        android:id="@+id/tv_dir_notecount"
+        android:layout_toRightOf="@+id/line1"
+        android:layout_toLeftOf="@+id/framelayout_rightdir"
+        android:layout_centerVertical="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="10sp"
+        android:text="共0条"
+        />
+
+    <FrameLayout
+        android:id="@+id/framelayout_rightdir"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="1dp"
+        >
+        <ImageView
+            android:id="@+id/iv_note_dir_back"
+            android:visibility="gone"
+            android:layout_width="15dp"
+            android:layout_height="15dp"
+            android:src="@drawable/ic_right_arrow"
+            />
+        <com.example.administrator.xiaominote.view.checkbox.SmoothCheckBox
+            android:id="@+id/scb_dir"
+            android:layout_width="20dp"
+            android:layout_height="20dp"/>
+
+    </FrameLayout>
+
+</RelativeLayout>

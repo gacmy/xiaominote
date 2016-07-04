@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content">
+
+    <RelativeLayout
+        android:id="@+id/notelayout"
+        android:padding="@dimen/paddingsize"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <TextView
+            android:layout_alignParentLeft="true"
+            android:id="@+id/content"
+            android:text="this is a note"
+            android:layout_width="wrap_content"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:maxEms="15"
+            android:maxLength="15"
+            android:layout_centerVertical="true"
+            android:layout_toLeftOf="@+id/framelayout_right"
+            android:layout_marginRight="5dp"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textSize="@dimen/textsize"
+            />
+        <FrameLayout
+            android:id="@+id/framelayout_right"
+            android:layout_width="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:layout_height="wrap_content">
+            <TextView
+                android:id="@+id/date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="@dimen/smalltextsize"
+                android:text="09:33"
+                />
+             <com.example.administrator.xiaominote.view.checkbox.SmoothCheckBox
+                 android:id="@+id/scb_note"
+                 android:layout_width="20dp"
+                 android:layout_height="20dp"/>
+
+        </FrameLayout>
+
+    </RelativeLayout>
+</FrameLayout>
