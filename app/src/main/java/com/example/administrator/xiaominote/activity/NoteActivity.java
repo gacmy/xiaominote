@@ -11,6 +11,7 @@ import android.widget.ImageView;
 import com.example.administrator.xiaominote.R;
 import com.example.administrator.xiaominote.utils.BitmapUtils;
 import com.example.administrator.xiaominote.view.richedittext.DeletableEditText;
+import com.example.administrator.xiaominote.view.richedittext.RichTextEditor;
 import com.example.administrator.xiaominote.view.roundedimageview.RoundedImageView;
 
 import cn.trinea.android.common.service.impl.ImageCache;
@@ -23,6 +24,9 @@ public class NoteActivity extends BaseActivity {
     private Toolbar toolbar;
     private ImageView iv_menu;
     private RoundedImageView riv;
+    private RichTextEditor richeditor;
+    private ImageView iv_back;
+
     public static final ImageCache IMAGE_CACHE = CacheManager.getImageCache();
    // private DeletableEditText et;
     @Override
@@ -45,8 +49,9 @@ public class NoteActivity extends BaseActivity {
     @Override
     protected void initView() {
         iv_menu = mGetViewSetOnClick(R.id.iv_menu);
+        iv_back = mGetViewSetOnClick(R.id.iv_back);
         riv = mGetView(R.id.iv_test);
-
+        richeditor = mGetView(R.id.richet);
     }
 
     @Override
@@ -54,8 +59,10 @@ public class NoteActivity extends BaseActivity {
         switch (v.getId()){
             case R.id.iv_menu:
                // BitmapUtils.gallery(this);
-
-
+                richeditor.setCheckBoxIsVisible(true);
+                break;
+            case R.id.iv_back:
+                richeditor.setCheckBoxIsVisible(false);
                 break;
         }
     }
