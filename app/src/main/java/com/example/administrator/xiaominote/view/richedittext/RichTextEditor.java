@@ -8,6 +8,8 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.os.Handler;
+import android.os.Message;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -22,9 +24,6 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
-
-//import com.example.gacmy.suixinji.utils.ActivityUtils;
-
 import com.example.administrator.xiaominote.R;
 import com.example.administrator.xiaominote.utils.ActivityUtils;
 import com.example.administrator.xiaominote.view.checkbox.SmoothCheckBox;
@@ -57,6 +56,16 @@ public class RichTextEditor extends ScrollView {
 	private List<RichData> list_richData;
 	public static String TAG = RichTextEditor.class.getName();
 	private boolean mIsVisibleCheckBox;
+
+	private boolean isInsertEdittext;//是否在插入图片后插入文本 插入图片有延时操作
+	private Handler  mHandler = new Handler(){
+		@Override
+		public void handleMessage(Message msg) {
+			super.handleMessage(msg);
+			addEditTextAt(getChildCount(),"");
+			isInsertEdittext = false;
+		}
+	};
 	public RichTextEditor(Context context) {
 		this(context, null);
 	}
@@ -69,7 +78,6 @@ public class RichTextEditor extends ScrollView {
 		super(context, attrs, defStyleAttr);
 		inflater = LayoutInflater.from(context);
 		this.context = context;
-
 		list_richData = new ArrayList<>();
 		// 1. 初始化allLayout
 		allLayout = new LinearLayout(context);
@@ -83,23 +91,29 @@ public class RichTextEditor extends ScrollView {
 		// 2. 初始化键盘退格监听
 		// 主要用来处理点击回删按钮时，view的一些列合并操作
 		keyListener = new OnKeyListener() {
-
 			@Override
 			public boolean onKey(View v, int keyCode, KeyEvent event) {
-
-
-				//Log.e("gac","onKey");
+				//删除按钮的处理情况
 				if (event.getAction() == KeyEvent.ACTION_DOWN
 						&& event.getKeyCode() == KeyEvent.KEYCODE_DEL) {
-					//Log.e("gac","onKey del");
 					DeletableEditText edit = (DeletableEditText) v;
-					onBackspacePress(edit);
+					RichData richData = findRichDataByEditText(edit);
+					onBackspacePress(richData);
 					return false;
 				}
+				//回车处理的情况
 				if(event.getAction() == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER){
-
 					DeletableEditText editText = (DeletableEditText) v;
-					enterAddEditText(editText);
+					RichData richData = findRichDataByEditText(editText);
+					int viewindex = -1;
+					if(richData != null){
+						viewindex =allLayout.indexOfChild(richData.view);
+					}
+					if(viewindex != -1){
+						enterAddEditText(editText,viewindex);
+					}else{
+						Log.e(TAG,"error:not found edittext");
+					}
 					return true;
 				}
 				return false;
@@ -117,7 +131,6 @@ public class RichTextEditor extends ScrollView {
 		};
 
 		focusListener = new OnFocusChangeListener() {
-
 			@Override
 			public void onFocusChange(View v, boolean hasFocus) {
 				if (hasFocus) {
@@ -131,15 +144,79 @@ public class RichTextEditor extends ScrollView {
 			@Override
 			public void onClick(View v) {
 				SmoothCheckBox checkBox = (SmoothCheckBox)v;
+
+				boolean isCheck = checkBox.isChecked();
+				if(isCheck){
+					isCheck = false;
+				}else{
+					isCheck = true;
+				}
+				checkBox.setChecked(isCheck);
 				//int index = checkBox.getTag();
+				RichData richData = findRichDataByCheckbox(checkBox);
+				if(richData != null){
+					richData.isChecked = isCheck;
+					richData.delet.setIsDrawLine(isCheck);
+				}
 
 			}
 		};
 		initRichEditText(context);
 	}
+
+	//找到控件在集合中的位置
+
+	private int findIndexByEditText(DeletableEditText et){
+		int res = -1;
+		for(int i = 0; i < list_richData.size();i++){
+			if(list_richData.get(i).delet.equals(et)){
+				res = i;
+				break;
+			}
+		}
+		return res;
+	}
+
+	//根据布局view 查找在集合的下标
+	private int findIndexByView(View view){
+		int res = -1;
+		for(int i = 0; i < list_richData.size();i++){
+			if(list_richData.get(i).view.equals(view)){
+				res = i;
+				break;
+			}
+		}
+		return res;
+	}
+
+	//根据控件找到RichData
+	private RichData findRichDataByCheckbox(SmoothCheckBox checkBox){
+		RichData data = null;
+		for(int i = 0; i < list_richData.size();i++){
+			if(list_richData.get(i).checkBox.equals(checkBox)){
+				data = list_richData.get(i);
+				break;
+			}
+		}
+		return data;
+	}
+
+	//根据控件找到RichData
+	private RichData findRichDataByEditText(DeletableEditText et){
+		RichData data = null;
+		for(int i = 0; i < list_richData.size();i++){
+			if(list_richData.get(i).delet.equals(et)){
+				data = list_richData.get(i);
+				break;
+			}
+		}
+		return data;
+	}
+
+
 	//按下回车键添加新的一行文本的处理方法
-	private void enterAddEditText(DeletableEditText editText){
-		int index = (int)editText.getTag();
+	private void enterAddEditText(DeletableEditText editText,int viewindex){
+		int index = viewindex;
 		//光标的位置
 		int cursorindex = editText.getSelectionStart();
 		//Log.e(TAG,"cursorindex:"+cursorindex);
@@ -150,7 +227,6 @@ public class RichTextEditor extends ScrollView {
 			if(!TextUtils.isEmpty(text)){
 				 curtext = text.substring(0,cursorindex);
 				 nexttext = text.substring(cursorindex,text.length());
-			//	Log.e(TAG,"text:"+text+ " curtext:"+curtext+" nexttext:"+nexttext);
 			}
 		}
 		editText.setText(curtext);
@@ -158,20 +234,22 @@ public class RichTextEditor extends ScrollView {
 		//每次按下回车键的时候都会检查checkbox是否显示
 		//checkboxIsVisible(list_richData.get(index+1).checkBox);
 	}
+
+
 	//当外部界面点击 checkBox是否显示则调用此函数
 	public void setCheckBoxIsVisible(boolean isVisible){
 		mIsVisibleCheckBox = isVisible;
-		int index = (int)lastFocusEdit.getTag();
-	//	Log.e(TAG,"index:"+index);
-		RichData checkBox = findCheckBoxByIndex(index);
-		if(checkBox == null ){
+		int index = findIndexByEditText(lastFocusEdit);
+		RichData richData = list_richData.get(index);
+		if(richData == null ){
 			return;
 		}
-		if(checkBox.checkBox == null){
+		if(richData.checkBox == null){
 			return;
 		}
-		checkboxIsVisible(checkBox.checkBox);
+		checkboxIsVisible(richData.checkBox);
 	}
+
 
 
 	//设置checkbox是否处于可见状态
@@ -179,20 +257,7 @@ public class RichTextEditor extends ScrollView {
 		checkBox.setVisibility(mIsVisibleCheckBox?View.VISIBLE:View.GONE);
 	}
 
-	//根据控件的位置tag 查找对应的checkbox
-	private RichData findCheckBoxByIndex(int index){
-		if(list_richData == null || list_richData.size() == 0){
-			return null;
-		}
-		RichData checkBox = null;
-		for(int i = 0; i < list_richData.size(); i++){
-			if(list_richData.get(i).viewindex == index){
-				checkBox = list_richData.get(i);
-				break;
-			}
-		}
-		return checkBox;
-	}
+
 	private void setEnableEditText(DeletableEditText et){
 		et.setEnabled(true);
 		et.clearFocus();
@@ -200,12 +265,14 @@ public class RichTextEditor extends ScrollView {
 		et.setSelection(et.getText().toString().length());//设置光标位置
 		lastFocusEdit = et;
 	}
+
+
 	private void initRichEditText(Context context){
 		createLineEditText("input content here",true);
-
 	}
 
 
+	//初始化的时候调用 创建Edittext
 	private DeletableEditText createLineEditText(String hint,boolean isVisibleCheck) {
 		View view = inflater.inflate(R.layout.edit_item1,
 				null);
@@ -218,8 +285,9 @@ public class RichTextEditor extends ScrollView {
 		editText.setOnFocusChangeListener(focusListener);
 		setEnableEditText(editText);
 		SmoothCheckBox checkBox = (SmoothCheckBox)view.findViewById(R.id.smoothcheckbox);
+		checkBox.setOnClickListener(checkListener);
 		checkBox.setTag(viewTagIndex);
-		addRichData(checkBox,editText,mIsVisibleCheckBox,viewTagIndex);
+		addRichData(checkBox,editText,mIsVisibleCheckBox,viewTagIndex,view);
 		LinearLayout.LayoutParams firstEditParam = new LinearLayout.LayoutParams(
 				LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
 		allLayout.addView(view, firstEditParam);
@@ -227,8 +295,8 @@ public class RichTextEditor extends ScrollView {
 		return editText;
 	}
 
-	//添加新的一行 所对应的数据信息
-	private void addRichData(SmoothCheckBox checkBox,DeletableEditText editor,boolean isVisble,int viewindex){
+	//初始化的时候 添加新的一行 所对应的数据信息
+	private void addRichData(SmoothCheckBox checkBox,DeletableEditText editor,boolean isVisble,int viewindex,View view){
 		RichData richData = new RichData();
 		checkboxIsVisible(checkBox);
 		richData.checkBox= checkBox;
@@ -236,6 +304,7 @@ public class RichTextEditor extends ScrollView {
 		richData.isVisibleCheck = isVisble;
 		richData.isChecked = checkBox.isChecked();
 		richData.viewindex = viewindex;
+		richData.view = view;
 		list_richData.add(richData);
 	}
 
@@ -255,42 +324,17 @@ public class RichTextEditor extends ScrollView {
 		editText.setOnFocusChangeListener(focusListener);
 		setEnableEditText(editText);
 		SmoothCheckBox checkBox = (SmoothCheckBox)view.findViewById(R.id.smoothcheckbox);
+		checkBox.setOnClickListener(checkListener);
 		checkBox.setTag(index+1);
-		int listindex = findIByIndex(index);//在layout 第index位置的元素 在list集合中的下标是第几个
-
-		//在指定位置后面插入元素
-		addRichDataAt(checkBox,editText,mIsVisibleCheckBox,index+1,listindex+1);
+		addRichData(checkBox,editText,mIsVisibleCheckBox,0,view);
 		LinearLayout.LayoutParams firstEditParam = new LinearLayout.LayoutParams(
 				LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
 		allLayout.addView(view,index+1, firstEditParam);
-		viewTagIndex++;
+		//viewTagIndex++;
 		return editText;
 	}
 
-	//添加新的一行 在指定位置 所对应的数据信息
-	private void addRichDataAt(SmoothCheckBox checkBox,DeletableEditText editor,boolean isVisble,int viewindex,int index){
-		RichData richData = new RichData();
-		checkboxIsVisible(checkBox);
-		richData.checkBox= checkBox;
-		richData.delet = editor;
-		richData.isVisibleCheck = isVisble;
-		richData.isChecked = checkBox.isChecked();
-		richData.viewindex = viewindex;
-		list_richData.add(index,richData);
-		//index后面 所有List结合中控件的tag标签 +1
-		for(int i = index+1; i < list_richData.size(); i++){
-			list_richData.get(i).viewindex+=1;
-			//重新设置tag标签
-			list_richData.get(i).delet.setTag(list_richData.get(i).viewindex);
-			list_richData.get(i).checkBox.setTag(list_richData.get(i).viewindex);
-		}
-		printListRichData();
-	}
-	private void printListRichData(){
-		for(int i = 0; i < list_richData.size(); i++){
-			Log.e(TAG,"richData viewindex:"+list_richData.get(i).viewindex);
-		}
-	}
+
 	//清空所有内容
 	public void clearAllText(){
 		if(allLayout != null){
@@ -331,22 +375,22 @@ public class RichTextEditor extends ScrollView {
 	/**
 	 * 处理软键盘backSpace回退事件
 	 *
-	 * @param editTxt
-	 *            光标所在的文本输入框
+	 * @param
+	 *            //光标所在的文本输入框
 	 */
-	private void onBackspacePress(DeletableEditText editTxt) {
+	private void onBackspacePress(RichData richData) {
+		DeletableEditText editTxt = richData.delet;
 		//Log.e(TAG,"onBackPress");
 		int startSelection = editTxt.getSelectionStart();
-	//	Log.e(TAG,"startSelecion:"+startSelection);
 		// 只有在光标已经顶到文本输入框的最前方，在判定是否删除之前的图片，或两个View合并
 		if (startSelection == 0) {
-			int editIndex = (int)editTxt.getTag();
+			int editIndex = allLayout.indexOfChild(richData.view);
+			Log.e(TAG,"backpress index:"+editIndex);
 			//如果为第一个Eidttext 删除checkbox
 			if(editIndex == 0){
-				list_richData.get(0).isChecked = false;
-				list_richData.get(0).checkBox.setVisibility(View.GONE);
+				richData.isChecked = false;
+				richData.checkBox.setVisibility(View.GONE);
 			}
-
 			View preView = allLayout.getChildAt(editIndex - 1); // 如果editIndex-1<0,
 			// 则返回的是null
 			if (null != preView) {
@@ -355,57 +399,61 @@ public class RichTextEditor extends ScrollView {
 					//Log.e(TAG,"RelativeLayout");
 					onImageCloseClick(preView);
 				} else if (preView instanceof FrameLayout) {
-					backPressEditText(editIndex);
+					backPressEditText(preView,richData.view);
 				}
 			}
 		}
 	}
 
+	//找到Edittext 前一个Edittext的布局视图
+	private View findPreEdittextView(int curindex){
+		View view = null;
+		if(curindex < 1){
+			return view;
+		}
+		for(int i = curindex-1;i >= 0;i--){
+			view = allLayout.getChildAt(i);
+			if(view instanceof FrameLayout){
+				break;
+			}
+		}
+		return view;
+	}
+
 	//按下返回键 上一个view 为Eidttext的处理方式
-	private void backPressEditText(int curindex){
+	private void backPressEditText(View view,View curView){
 		Log.e(TAG,"FrameLayout");
-		Log.e(TAG,"curindex:"+curindex);
+		int i = findIndexByView(curView);//当前光标位置的view 集合下标
+		//Log.e(TAG,"curindex:"+curindex);
 		//找到view index 对应集合中控件的位置
-		int i = findIByIndex(curindex);
 		Log.e(TAG,"list i:"+i);
 		// 光标EditText的上一个view对应的还是文本框EditText
-		if(i==0){
 
-		}else if(i == -1){
-			return;
-		}else{
+			int curviewindex = allLayout.indexOfChild(curView);
+			View preView = findPreEdittextView(curviewindex);
+			if(preView == null){
+				return;
+			}
+			int preIndex = findIndexByView(preView);
+			Log.e(TAG,"curindex:"+curviewindex+" preindex:"+preIndex);
 			//隐藏checkbox
 			list_richData.get(i).isChecked = false;
 			list_richData.get(i).checkBox.setVisibility(View.GONE);
 			//凭凑上下 edittext的文本
-			DeletableEditText preeditext = list_richData.get(i-1).delet;
+			DeletableEditText preeditext = list_richData.get(preIndex).delet;
 			DeletableEditText nexteidtext = list_richData.get(i).delet;
 			String strpre = preeditext.getText().toString();
 			String strnext = nexteidtext.getText().toString();
 			String text = strpre+strnext;
 			nexteidtext.setText("");
 			preeditext.setText(text);
+			preeditext.setSelection(0);//设置光标位置在最前面为0
 			//int prei= findIByIndex(curindex -1);
-			setEnableEditText(list_richData.get(i-1).delet);
-		}
+			setEnableEditText(list_richData.get(preIndex).delet);
+
 	}
 
 
-	//根据控件的位置tag 查找对应的checkbox
-	private int findIByIndex(int index){
-		int listIndex = -1;
-		if(list_richData == null || list_richData.size() == 0){
-			return listIndex;
-		}
-
-		for(int i = 0; i < list_richData.size(); i++){
-			if(list_richData.get(i).viewindex == index){
-				listIndex = i;
-				break;
-			}
-		}
-		return listIndex;
-	}
 
 	/**
 	 * 处理图片叉掉的点击事件
@@ -463,10 +511,10 @@ public class RichTextEditor extends ScrollView {
 		Bitmap bmp = getScaledBitmap(imagePath, getWidth());
 		if(bmp == null){
 
-			//Log.e("gac","bmp is null");
+			Log.e("gac","bmp is null");
 			return;
 		}else{
-			//Log.e("gac","bmp is not null");
+			Log.e("gac","bmp is not null");
 		}
 		insertImage(bmp, imagePath);
 	}
@@ -478,12 +526,12 @@ public class RichTextEditor extends ScrollView {
 		Log.e("gac","getWidth:"+ screenWidth);
 		Bitmap bmp = getScaledBitmap(imagePath, screenWidth);
 		if(bmp == null){
-
 			Log.e("gac","bmp is null");
 			return;
 		}else{
 			Log.e("gac","bmp is not null");
 		}
+
 		Log.e("gac","insertImage index:"+allLayout.getChildCount());
 		addImageViewAtIndexInstant(allLayout.getChildCount(), bmp, imagePath);
 	}
@@ -492,35 +540,35 @@ public class RichTextEditor extends ScrollView {
 	 */
 	private void insertImage(Bitmap bitmap, String imagePath) {
 		String lastEditStr = lastFocusEdit.getText().toString();
-		int cursorIndex = lastFocusEdit.getSelectionStart();
+		int cursorIndex = lastFocusEdit.getSelectionStart();//光标的位置
+		RichData richData = findRichDataByEditText(lastFocusEdit);
+		int curviewindex = allLayout.indexOfChild(richData.view);
+		int foucseditindex = findIndexByEditText(lastFocusEdit);
+		//光标位置在最前面的时候 则在Eidttext上面插入图片
+		if(cursorIndex == 0){
+			addImageViewAtIndex(curviewindex, bitmap, imagePath, foucseditindex);
+			return;
+		}
 
-		String editStr1 = lastEditStr.substring(0, cursorIndex).trim();
-		int lastEditIndex = allLayout.indexOfChild(lastFocusEdit);//图片插入的位置
-		int foucseditindex = (int)lastFocusEdit.getTag();//EditText list集合中的位置
-		Log.e("gac","lastEditIndex:"+foucseditindex);
-		if (lastEditStr.length() == 0 || editStr1.length() == 0) {
-			if(lastEditIndex == 0){
-				//防止标题栏上面插入图片
-				lastEditIndex = 1;
-				setEnableEditText(list_richData.get(1).delet);
-				addImageViewAtIndex(lastEditIndex, bitmap, imagePath,1);
-			}else{
-				// 如果EditText为空，或者光标已经顶在了editText的最前面，则直接插入图片，并且EditText下移即可
-				addImageViewAtIndex(lastEditIndex, bitmap, imagePath,foucseditindex);
-			}
-
-		} else {
-			//edittext有内容的时候 则在下面添加图片
-			// 当前editext是否是最后一个edittext 是则创建新的edittext 在
-			if (allLayout.getChildCount() - 1 == lastEditIndex) {
-				setEnableEditText(createLineEditText("", true));
-				addImageViewAtIndex(lastEditIndex + 1, bitmap, imagePath,foucseditindex+1);
-			} else {
-				addImageViewAtIndex(lastEditIndex + 1, bitmap, imagePath,foucseditindex+1);
-			}
-
-//			lastFocusEdit.requestFocus();
-//			lastFocusEdit.setSelection(editStr1.length(), editStr1.length());
+		//当光标位于文字中间的时候 则 将光标右边的文字 添加到图片下面 并且重新创建一个Edittext控件
+		String leftstr = lastEditStr.substring(0, cursorIndex).trim();
+		String rightstr = lastEditStr.substring(cursorIndex,lastEditStr.length()).trim();
+		if( !TextUtils.isEmpty(leftstr) &&  !TextUtils.isEmpty(rightstr) ){
+			lastFocusEdit.setText(leftstr);
+			addImageViewAtIndexInstant(curviewindex+1, bitmap, imagePath);
+			addEditTextAt(curviewindex+1,rightstr);
+			return;
+		}
+		//当光标位于最右边的时候 editext 不是最后一个view 则直接在Edittext下面插入 如果是则插入后 继续添加个edittext
+		if(curviewindex == allLayout.getChildCount()-1){
+			//添加imageview
+			//Log.e(TAG,"getchildCount::"+allLayout.getChildCount());
+			isInsertEdittext = true;
+			addImageViewAtIndexInstant(curviewindex+1, bitmap, imagePath);
+		//	Log.e(TAG,"getchildCount1::"+allLayout.getChildCount());
+			addEditTextAt(allLayout.getChildCount()-1,"");
+		}else{
+			addImageViewAtIndex(curviewindex+1, bitmap, imagePath, foucseditindex);
 		}
 		hideKeyBoard();
 	}
@@ -567,7 +615,7 @@ public class RichTextEditor extends ScrollView {
 	}
 
 	//立即插入图片 不进行延时处理
-	private void addImageViewAtIndexInstant(final int index, Bitmap bmp,
+	private View addImageViewAtIndexInstant(final int index, Bitmap bmp,
 											String imagePath) {
 		final RelativeLayout imageLayout = createImageLayout();
 		DataImageView imageView = (DataImageView) imageLayout
@@ -581,11 +629,14 @@ public class RichTextEditor extends ScrollView {
 		RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(
 				LayoutParams.MATCH_PARENT, imageHeight);
 		imageView.setLayoutParams(lp);
+	//setEnableEditText(list_richData.get(foucsindex).delet);
 		allLayout.addView(imageLayout, index);
-
+		return imageLayout;
 	}
 	/**
 	 * 在特定位置添加ImageView
+	 * index 图片插入位置
+	 * foucsindex 获得焦点的那行Edittext索引  list index not view index
 	 */
 	private void addImageViewAtIndex(final int index, Bitmap bmp,
 									 String imagePath,int foucsindex) {
@@ -607,6 +658,10 @@ public class RichTextEditor extends ScrollView {
 			@Override
 			public void run() {
 				allLayout.addView(imageLayout, index);
+
+//				if(isInsertEdittext){
+//					mHandler.sendEmptyMessage(0x00);
+//				}
 			}
 		}, 200);
 	}

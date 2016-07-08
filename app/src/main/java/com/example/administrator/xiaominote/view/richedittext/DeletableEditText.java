@@ -1,33 +1,27 @@
 package com.example.administrator.xiaominote.view.richedittext;
 
 import android.content.Context;
-import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Rect;
-
-import android.text.TextUtils;
-
+import android.text.Editable;
+import android.text.Spanned;
+import android.text.TextWatcher;
 import android.util.AttributeSet;
-import android.util.Log;
-import android.view.KeyEvent;
-import android.view.View;
-
 import android.widget.EditText;
 
-import com.example.administrator.xiaominote.utils.ActivityUtils;
 
 /**
- * 这个是从stackOverFlow上面找到的解决方案，主要用途是处理软键盘回删按钮backSpace时回调OnKeyListener
+ *
  * 
- * @author xmuSistone
+ * @author gac
  * 
  */
 public class DeletableEditText extends EditText {
 	private Paint mPaint;
-	private boolean isDrawLine = true;
 	private Context mContext;
-	OnKeyListener keyListener;
+	int beforcount;
+	private Editable editable;
+	private TextSpan span;
 	public DeletableEditText(Context context, AttributeSet attrs, int defStyle) {
 		super(context, attrs, defStyle);
 		init(context);
@@ -49,82 +43,40 @@ public class DeletableEditText extends EditText {
 		mPaint.setStrokeWidth(4);
 		mPaint.setStyle(Paint.Style.STROKE);
 		mContext = context;
-
-
+		addTextChangedListener(watcher);
+		span = new TextSpan();
 	}
 
-//	@Override
-//	public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
-//		return new DeleteInputConnection(super.onCreateInputConnection(outAttrs),
-//				true);
-//	}
+	TextWatcher watcher = new TextWatcher() {
+		@Override
+		public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+			beforcount = count;
+		}
+
+		@Override
+		public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+		}
+
+		@Override
+		public void afterTextChanged(Editable s) {
+			editable = s;
+			s.setSpan(span,0,s.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+		}
+	};
+
 
 	public void setIsDrawLine(boolean isDrawLine){
-		this.isDrawLine = isDrawLine;
-		invalidate();
-	}
-	private void drawCenterLine(Canvas canvas){
-		if( getText() != null ){
-			String str = getText().toString();
-			Rect rect = new Rect();
-			if(!TextUtils.isEmpty(str)){
-				getPaint().getTextBounds(str,0,str.length(),rect);
-				float centerY = getLineHeight();
-			//	Log.e("gac","right:"+rect.right +" centerx:"+(rect.bottom+rect.top)/2+" centerY:"+centerY);
-				canvas.drawLine(13,centerY,rect.right+10,centerY,mPaint);
 
-			}
+		span.setIsDrawLine(isDrawLine);
+		if(editable != null){
+			editable.setSpan(span,0,editable.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
 		}
-	}
-
-
-	public boolean sendEnterKey(){
-		if( getText() != null ){
-			String str = getText().toString();
-			Rect rect = new Rect();
-			if(!TextUtils.isEmpty(str)){
-				getPaint().getTextBounds(str,0,str.length(),rect);
-				float screenwidth =ActivityUtils.getScreenWidth(getContext());
-				Log.e("gac","screenwidth:"+screenwidth+" right:"+rect.right);
-				if(rect.right >=  screenwidth){
-					return true;
-				}
-
-			}
+		if (!isDrawLine){
+			editable.removeSpan(span);
 		}
-		return false;
+
 	}
-	@Override
-	protected void onDraw(Canvas canvas) {
-		super.onDraw(canvas);
-		sendEnterKey();
-		if(isDrawLine){
-			drawCenterLine(canvas);
-		}
-	}
-//
-//	private class DeleteInputConnection extends InputConnectionWrapper {
-//
-//		public DeleteInputConnection(InputConnection target, boolean mutable) {
-//			super(target, mutable);
-//		}
-//
-//		@Override
-//		public boolean sendKeyEvent(KeyEvent event) {
-//			return super.sendKeyEvent(event);
-//		}
-//
-//		@Override
-//		public boolean deleteSurroundingText(int beforeLength, int afterLength) {
-//			if (beforeLength == 1 && afterLength == 0) {
-//				return sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,
-//						KeyEvent.KEYCODE_DEL))
-//						&& sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP,
-//								KeyEvent.KEYCODE_DEL));
-//			}
-//
-//			return super.deleteSurroundingText(beforeLength, afterLength);
-//		}
-//
-//	}
+
+
 }

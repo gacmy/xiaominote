@@ -58,7 +58,7 @@ public class NoteActivity extends BaseActivity {
     public void onClick(View v) {
         switch (v.getId()){
             case R.id.iv_menu:
-               // BitmapUtils.gallery(this);
+                //BitmapUtils.gallery(this);
                 richeditor.setCheckBoxIsVisible(true);
                 break;
             case R.id.iv_back:
@@ -71,10 +71,10 @@ public class NoteActivity extends BaseActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         Uri uri = BitmapUtils.getGalleryUri(data, requestCode);
-        Bitmap bitmap = BitmapUtils.compressImg(uri, this);
-        if(bitmap!= null){
-            riv.setImageBitmap(bitmap);
-        }
+       //Bitmap bitmap = BitmapUtils.compressImg(uri, this);
+      // if(bitmap!= null){
+           richeditor.insertImage(uri.getPath());
+        //}
 
     }
 }
